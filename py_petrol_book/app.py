@@ -22,6 +22,10 @@ def main():
     )
 
     pb_path = pathlib.Path(pb_file)
+    if pb_path.is_dir():
+        st.error('please check your path')
+        st.stop()
+
     if not pb_path.exists():
         st.warning('please check your path or new file will created')
         content = {
@@ -155,7 +159,6 @@ def main():
     )
 
 
-@st.cache_data
 def read_petrol_book(pb_file: str) -> dict:
     if pb_file == '':
         st.error('please enter petrol-book file')
