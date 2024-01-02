@@ -3,7 +3,7 @@
     {
       "date": "2019-03-26",
       "time": "17:09",
-      "petrolStation": "Gasstation E35",
+      "petrolStation": "GasStation E35",
       "petrolType": "Super 95 E5",
       "costs": 29.4,
       "liquid": 20.15,
@@ -18,7 +18,7 @@
     {
       "date": "2023-12-21",
       "time": "19:25",
-      "petrolStation": "Gasstation FAE 567",
+      "petrolStation": "GasStation FAE 567",
       "petrolType": "Super 95 E5",
       "costs": 93.38,
       "liquid": 54.01,
