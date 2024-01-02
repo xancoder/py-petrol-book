@@ -4,8 +4,7 @@ easy way to manage vehicle fuel consumption
 
 ## Getting started
 
-this example was tested in an unattended virtualbox debian virtual machine installation, so path and names should be
-adopted
+this example was tested in an unattended virtualbox debian virtual machine installation
 
 in a terminal at project folder use following commands
 
