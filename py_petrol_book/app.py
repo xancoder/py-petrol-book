@@ -113,7 +113,7 @@ def main():
             st.rerun()
 
     if not content['fuelingOperations']:
-        st.error('please add fuelings')
+        st.error('please add fueling operations')
         st.stop()
 
     data = []
@@ -135,7 +135,14 @@ def main():
                 else:
                     tmp[v] = i[v]
             data.append(tmp)
+
         else:
+            cplv = float(i['costs']) / float(i['liquid'])
+            cpdv = float(i['costs']) / float(i['distance'])
+            lpdv = float(i['liquid']) / float(i['distance'])
+            cpl = f"{round(cplv, 3)} {i['units']['costs']} / {i['units']['liquid']}"
+            cpd = f"{round(cpdv * calc_distance, 2)} {i['units']['costs']} / {calc_distance}{i['units']['distance']}"
+            lpd = f"{round(lpdv * calc_distance, 2)} {i['units']['liquid']} / {calc_distance}{i['units']['distance']}"
             data.append({
                 'date': i['date'],
                 'time': i['time'],
@@ -144,10 +151,10 @@ def main():
                 'costs': f"{i['costs']} {i['units']['costs']}",
                 'liquid': f"{i['liquid']} {i['units']['liquid']}",
                 'distance': f"{i['distance']} {i['units']['distance']}",
-                'mileage': f"{i['mileage'] - start_ma} {i['units']['distance']}",
-                'costs / liquid': f"{round(i['costs'] / i['liquid'], 3)} {i['units']['costs']} / {i['units']['liquid']}",
-                f'liquid / {calc_distance} distance': f"{round((i['liquid'] / i['distance']) * calc_distance, 2)} {i['units']['liquid']} / {calc_distance}{i['units']['distance']}",
-                f'costs / {calc_distance} distance': f"{round((i['costs'] / i['distance']) * calc_distance, 2)} {i['units']['costs']} / {calc_distance}{i['units']['distance']}"
+                'mileage': f"{int(i['mileage']) - start_ma} {i['units']['distance']}",
+                'costs / liquid': cpl,
+                f'liquid / {calc_distance} distance': lpd,
+                f'costs / {calc_distance} distance': cpd
             })
 
     df = pandas.DataFrame(data)
