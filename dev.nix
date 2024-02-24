@@ -4,12 +4,19 @@ let
   };
 in
 pkgs.mkShell {
-  name="run-py-petrol-book";
+  name="dev-env-py-petrol-book";
   packages = with pkgs; [
+    git
+    jetbrains.pycharm-professional
+    poetry
     python311
+    python311Packages.pip
     python311Packages.streamlit
   ];
   shellHook = ''
-streamlit run py_petrol_book/app.py
+echo "enjoy developing"
+which poetry
+which python
+pycharm-professional
 '';
 }
