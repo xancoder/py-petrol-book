@@ -1,15 +1,41 @@
-[tool.poetry]
+[project]
 name = "py-petrol-book"
 version = "0.1.0"
 description = "easy way to manage vehicle fuel consumption"
-authors = ["Alexander Sommer <xancoder@gmail.com>"]
 readme = "README.md"
+requires-python = ">=3.13"
+authors = [
+    { name = "Alexander Sommer", email = "xancoder@gmail.com" }
+]
+dependencies = [
+  "flet==0.27.3"
+]
 
-[tool.poetry.dependencies]
-python = "^3.11"
-streamlit = "^1.29.0"
+[tool.flet]
+# org name in reverse domain name notation, e.g. "com.mycompany".
+# Combined with project.name to build bundle ID for iOS and Android apps
+org = "de.xancoder"
 
+# project display name that is used as an app title on Android and iOS home screens,
+# shown in window titles and about app dialogs on desktop.
+product = "py-petrol-book"
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+# company name to display in about app dialogs
+company = "Flet"
+
+# copyright text to display in about app dialogs
+copyright = "Copyright (C) 2025"
+
+[tool.flet.app]
+path = "src"
+
+[tool.uv]
+dev-dependencies = [
+    "flet[all]==0.27.3",
+]
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.group.dev.dependencies]
+flet = {extras = ["all"], version = "0.27.3"}
