@@ -182,15 +182,107 @@ def main(page: ft.Page):
     )
 
     calc_distance_value = ft.TextField(
-        label="distance calculation value",
+        label="per distance",
         value="100",
         expand=True,
+        text_align=ft.TextAlign.RIGHT,
         on_change=lambda _: build_table(),
     )
 
-    table = ft.DataTable(
-        horizontal_margin=10,
+    def handle_date_change(e):
+        logger.info(f"Date changed: {e.control.value.strftime('%Y-%m-%d')}")
+        input_date.value = e.control.value.strftime('%Y-%m-%d')
+        input_date.update()
+
+    def handle_date_dismissal(e):
+        logger.info(f"DatePicker dismissed: {e}")
+
+    def handle_time_change(e):
+        logger.info(f"TimePicker change: {time_picker.value} - {e}")
+        input_time.value = time_picker.value.strftime("%H:%M")
+        input_time.update()
+
+    def handle_time_dismissal(e):
+        logger.info(f"TimePicker dismissed: {time_picker.value} - {e}")
+
+    def handle_time_entry_mode_change(e):
+        logger.info(f"TimePicker Entry mode changed to {e.entry_mode}")
+
+    time_picker = ft.TimePicker(
+        confirm_text="Confirm",
+        error_invalid_text="Time out of range",
+        help_text="Pick your time slot",
+        on_change=handle_time_change,
+        on_dismiss=handle_time_dismissal,
+        on_entry_mode_change=handle_time_entry_mode_change,
+    )
+
+    input_date = ft.TextField(
+        label="Date",
+        value=datetime.datetime.now().strftime("%Y-%m-%d"),
+        width=125,
+        on_click=lambda e: page.open(
+            ft.DatePicker(
+                last_date=datetime.datetime.now(),
+                on_change=handle_date_change,
+                on_dismiss=handle_date_dismissal,
+            )
+        ),
+    )
+
+    input_time = ft.TextField(
+        label="Time",
+        value=datetime.datetime.now().strftime("%H:%M"),
+        width=75,
+        read_only=True,
+        on_click=lambda _: page.open(time_picker),
+    )
+
+    input_petrol_station = ft.TextField(
+        label="Petrol Station",
+        value="Aral Annaberg-Buchholz",
         expand=True,
+    )
+
+    input_petrol_type = ft.TextField(
+        label="Petrol Type",
+        value="Super E5",
+        width=150,
+    )
+
+    input_costs = ft.TextField(
+        label="Costs",
+        value="80.50",
+        width=100,
+        text_align=ft.TextAlign.RIGHT,
+    )
+
+    input_liquid = ft.TextField(
+        label="Liquid",
+        value="50.12",
+        width=100,
+        text_align=ft.TextAlign.RIGHT,
+    )
+
+    input_distance = ft.TextField(
+        label="Distance",
+        value="650.6",
+        width=100,
+        text_align=ft.TextAlign.RIGHT,
+    )
+
+    input_mileage = ft.TextField(
+        label="Mileage",
+        value="79000",
+        width=100,
+        text_align=ft.TextAlign.RIGHT,
+    )
+
+    input_submit = ft.IconButton(
+        icon=ft.Icons.ADD,
+    )
+
+    table = ft.DataTable(
         border=ft.core.border.all(1),
         columns=[
             ft.DataColumn(ft.Text("Date")),
@@ -225,6 +317,19 @@ def main(page: ft.Page):
                         ft.Row(
                             controls=[
                                 calc_distance_value,
+                            ],
+                        ),
+                        ft.Row(
+                            controls=[
+                                input_date,
+                                input_time,
+                                input_petrol_station,
+                                input_petrol_type,
+                                input_costs,
+                                input_liquid,
+                                input_distance,
+                                input_mileage,
+                                input_submit,
                             ],
                         ),
                         ft.Row(
