@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def main(page: ft.Page):
-    def handle_lifecycle_event(event):
+    def handle_lifecycle_event(event) -> None:
         if event.data == "detach":
             try:
                 if page.platform == ft.PagePlatform.ANDROID:
@@ -33,7 +33,7 @@ def main(page: ft.Page):
     page.theme_mode = ft.ThemeMode.DARK
     page.adaptive = True
 
-    def pick_files_result(e: ft.FilePickerResultEvent):
+    def pick_files_result(e: ft.FilePickerResultEvent) -> None:
         logger.info(f"pick files result: {e}")
         pb_file.value = None
         if e.files and e.files[0].path is not None:
@@ -42,7 +42,7 @@ def main(page: ft.Page):
 
         build_table()
 
-    def build_table():
+    def build_table() -> None:
         table_data_default = {
             "fuelingOperations": [],
             "meta": {
@@ -57,7 +57,7 @@ def main(page: ft.Page):
         }
 
         try:
-            calc_distance_value.value = int(calc_distance_value.value)
+            calc_distance = int(calc_distance_value.value)
         except ValueError:
             return
 
@@ -68,7 +68,7 @@ def main(page: ft.Page):
             return
 
         table_data_sorted = sort_table_data(table_data)
-        generate_table(table_data_sorted)
+        generate_table(table_data_sorted, calc_distance)
 
     def read_petrol_book(petrol_book_file: str) -> dict | None:
         if petrol_book_file == "" or petrol_book_file is None:
@@ -88,13 +88,13 @@ def main(page: ft.Page):
             status_bar_start.update()
             return None
 
-    def sort_table_data(td: dict):
+    def sort_table_data(td: dict) -> dict:
         for row in td["fuelingOperations"]:
             row["date_obj"] = datetime.datetime.strptime(row["date"], "%Y-%m-%d")
         td["fuelingOperations"].sort(key=lambda x: x["date_obj"], reverse=True)
         return td
 
-    def generate_table(td: dict):
+    def generate_table(td: dict, cd: int) -> None:
         if len(td["fuelingOperations"]) == 0:
             status_bar_start.value = "petrol book file is empty"
             status_bar_start.update()
@@ -130,13 +130,11 @@ def main(page: ft.Page):
                 tmp["lpd"] = f"-"
             else:
                 cplv = round(float(row["costs"]) / float(row["liquid"]), 3)
-                cpdv = round((float(row["costs"]) / float(row["distance"]) * calc_distance_value.value), 2)
-                lpdv = round((float(row["liquid"]) / float(row["distance"]) * calc_distance_value.value), 2)
+                cpdv = round((float(row["costs"]) / float(row["distance"]) * cd), 2)
+                lpdv = round((float(row["liquid"]) / float(row["distance"]) * cd), 2)
                 tmp["cpl"] = f"{cplv:.3f} {row['units']['costs']} / {row['units']['liquid']}"
-                tmp[
-                    "cpd"] = f"{cpdv:.2f} {row['units']['costs']} / {calc_distance_value.value}{row['units']['distance']}"
-                tmp[
-                    "lpd"] = f"{lpdv:.2f} {row['units']['liquid']} / {calc_distance_value.value}{row['units']['distance']}"
+                tmp["cpd"] = f"{cpdv:.2f} {row['units']['costs']} / {cd}{row['units']['distance']}"
+                tmp["lpd"] = f"{lpdv:.2f} {row['units']['liquid']} / {cd}{row['units']['distance']}"
 
             btd.append(
                 ft.DataRow(
@@ -189,23 +187,23 @@ def main(page: ft.Page):
         on_change=lambda _: build_table(),
     )
 
-    def handle_date_change(e):
+    def handle_date_change(e) -> None:
         logger.info(f"Date changed: {e.control.value.strftime('%Y-%m-%d')}")
         input_date.value = e.control.value.strftime('%Y-%m-%d')
         input_date.update()
 
-    def handle_date_dismissal(e):
+    def handle_date_dismissal(e) -> None:
         logger.info(f"DatePicker dismissed: {e}")
 
-    def handle_time_change(e):
+    def handle_time_change(e) -> None:
         logger.info(f"TimePicker change: {time_picker.value} - {e}")
         input_time.value = time_picker.value.strftime("%H:%M")
         input_time.update()
 
-    def handle_time_dismissal(e):
+    def handle_time_dismissal(e) -> None:
         logger.info(f"TimePicker dismissed: {time_picker.value} - {e}")
 
-    def handle_time_entry_mode_change(e):
+    def handle_time_entry_mode_change(e) -> None:
         logger.info(f"TimePicker Entry mode changed to {e.entry_mode}")
 
     time_picker = ft.TimePicker(
@@ -361,4 +359,9 @@ def main(page: ft.Page):
     )
 
 
-ft.app(main)
+def start():
+    ft.app(main)
+
+
+if __name__ == "__main__":
+    start()
