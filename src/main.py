@@ -8,11 +8,13 @@ from typing import Any, Dict, List, Optional
 
 import flet as ft
 
+# Constants
 APP_TITLE = "Petrol Book"
 DEFAULT_PETROL_BOOK_FILENAME = "petrol_book.json"
-DEFAULT_CALC_DISTANCE = "100"
+DEFAULT_CALC_DISTANCE = 100
 DEFAULT_THEME = ft.ThemeMode.SYSTEM
 
+# Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -28,85 +30,73 @@ class PetrolBookData:
 
     DEFAULT_TABLE_DATA = {
         "fuelingOperations": [],
-        "meta": {
-            "manufacturer": "",
-            "model": ""
-        },
-        "units": {
-            "costs": "\u20ac",
-            "distance": "km",
-            "liquid": "l"
-        }
+        "meta": {"manufacturer": "", "model": ""},
+        "units": {"costs": "\u20ac", "distance": "km", "liquid": "l"},
     }
 
     def read_file(self) -> Dict[str, Any]:
-        """Read and parse petrol book file.
-
-        Returns:
-            The table data from the file or default table data if file doesn't exist
-        """
+        """Read and parse petrol book file."""
         if not self.file_path:
-            self.file_path = str(pathlib.Path.home() / DEFAULT_PETROL_BOOK_FILENAME)
-            self.table_data = self.DEFAULT_TABLE_DATA.copy()
-            return self.table_data
+            return self._initialize_default_data()
 
         pb_path = pathlib.Path(self.file_path)
-
         if not pb_path.exists():
             logger.warning(f"File {self.file_path} does not exist. Using default data.")
-            self.table_data = self.DEFAULT_TABLE_DATA.copy()
-            return self.table_data
+            return self._initialize_default_data()
 
         try:
-            with pb_path.open(encoding="UTF-8") as source:
-                self.table_data = json.load(source)
-                logger.info(f"Successfully loaded data from {self.file_path}")
-                return self.table_data
+            return self._load_data_from_file(pb_path)
         except json.decoder.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON file {self.file_path}: {str(e)}")
-            self.table_data = self.DEFAULT_TABLE_DATA.copy()
-            return self.table_data
+            return self._initialize_default_data()
         except Exception as e:
             logger.error(f"Unexpected error reading file {self.file_path}: {str(e)}")
-            self.table_data = self.DEFAULT_TABLE_DATA.copy()
+            return self._initialize_default_data()
+
+    def _initialize_default_data(self) -> Dict[str, Any]:
+        """Initialize with default data and path if needed."""
+        if not self.file_path:
+            self.file_path = str(pathlib.Path.home() / DEFAULT_PETROL_BOOK_FILENAME)
+        self.table_data = self.DEFAULT_TABLE_DATA.copy()
+        return self.table_data
+
+    def _load_data_from_file(self, file_path: pathlib.Path) -> Dict[str, Any]:
+        """Load and parse data from the specified file."""
+        with file_path.open(encoding="UTF-8") as source:
+            self.table_data = json.load(source)
+            logger.info(f"Successfully loaded data from {self.file_path}")
             return self.table_data
 
     def save_file(self) -> bool:
-        """Save the current data to the file.
-
-        Returns:
-            True if save was successful, False otherwise
-        """
+        """Save the current data to the file."""
         if not self.file_path:
             self.file_path = str(pathlib.Path.home() / DEFAULT_PETROL_BOOK_FILENAME)
 
         try:
-            # Remove temporary date_obj fields before saving
-            for operation in self.table_data.get("fuelingOperations", []):
-                if "date_obj" in operation:
-                    del operation["date_obj"]
-
-            with open(self.file_path, "w", encoding="UTF-8") as file:
-                json.dump(self.table_data, file, indent=2)
-            logger.info(f"Successfully saved data to {self.file_path}")
+            self._clean_temporary_fields()
+            self._write_data_to_file()
             return True
         except Exception as e:
             logger.error(f"Failed to save data to {self.file_path}: {str(e)}")
             return False
 
+    def _clean_temporary_fields(self) -> None:
+        """Remove temporary fields before saving."""
+        for operation in self.table_data.get("fuelingOperations", []):
+            if "date_obj" in operation:
+                del operation["date_obj"]
+
+    def _write_data_to_file(self) -> None:
+        """Write data to the file."""
+        with open(self.file_path, "w", encoding="UTF-8") as file:
+            json.dump(self.table_data, file, indent=2)
+        logger.info(f"Successfully saved data to {self.file_path}")
+
     def add_fueling_operation(self, operation: Dict[str, Any]) -> bool:
-        """Add a new fueling operation to the data.
-
-        Args:
-            operation: Dictionary containing the fueling operation data
-
-        Returns:
-            True if operation was added successfully, False otherwise
-        """
+        """Add a new fueling operation to the data."""
         try:
             if "fuelingOperations" not in self.table_data:
                 self.table_data = self.DEFAULT_TABLE_DATA.copy()
-
             self.table_data["fuelingOperations"].append(operation)
             return True
         except Exception as e:
@@ -116,10 +106,15 @@ class PetrolBookData:
     def sort_data(self) -> Dict[str, Any]:
         """Sort fueling operations by date in descending order."""
         if not self.table_data or "fuelingOperations" not in self.table_data:
-            self.table_data = self.DEFAULT_TABLE_DATA.copy()
-            return self.table_data
+            return self._initialize_default_data()
 
         operations = self.table_data.get("fuelingOperations", [])
+        self._add_date_objects(operations)
+        operations.sort(key=lambda x: x["date_obj"], reverse=True)
+        return self.table_data
+
+    def _add_date_objects(self, operations: List[Dict[str, Any]]) -> None:
+        """Add date objects to operations for sorting purposes."""
         for row in operations:
             try:
                 row["date_obj"] = datetime.datetime.strptime(row["date"], "%Y-%m-%d")
@@ -127,19 +122,29 @@ class PetrolBookData:
                 # Set a default date if date is invalid or missing
                 row["date_obj"] = datetime.datetime.min
 
-        operations.sort(key=lambda x: x["date_obj"], reverse=True)
-        return self.table_data
-
     def get_units(self) -> Dict[str, str]:
         """Get the units from the table data."""
         return self.table_data.get("units", self.DEFAULT_TABLE_DATA["units"])
 
-    def prepare_table_row_data(self, row: Dict[str, Any], start_mileage: float, calc_distance: int) -> Dict[str, Any]:
-        """Process a single data row for display with appropriate formatting and calculations."""
+    def prepare_table_row_data(
+        self, row: Dict[str, Any], start_mileage: float, calc_distance: int
+    ) -> Dict[str, Any]:
+        """Process a single data row for display with calculations."""
         result = {}
         units = self.get_units()
 
-        # Process each field
+        # Format basic fields
+        result = self._format_basic_fields(row, units, start_mileage)
+
+        # Calculate derived values
+        self._add_derived_calculations(result, row, calc_distance, units)
+        return result
+
+    def _format_basic_fields(
+        self, row: Dict[str, Any], units: Dict[str, str], start_mileage: float
+    ) -> Dict[str, Any]:
+        """Format basic fields with appropriate units."""
+        result = {}
         for field_name, value in row.items():
             if value == "" or value is None:
                 result[field_name] = "-"
@@ -152,31 +157,33 @@ class PetrolBookData:
             elif field_name == "distance":
                 result[field_name] = f"{value:.1f} {units.get('distance', '')}"
             elif field_name == "mileage":
-                result[field_name] = f"{int(value) - start_mileage} {units.get('distance', '')}"
+                result[field_name] = (
+                    f"{int(value) - start_mileage} {units.get('distance', '')}"
+                )
             else:
                 result[field_name] = value
-
-        # Calculate derived values
-        self._add_derived_calculations(result, row, calc_distance, units)
         return result
 
-    def _add_derived_calculations(self, result: Dict[str, Any], row: Dict[str, Any],
-                                  calc_distance: int, units: Dict[str, str]) -> None:
+    def _add_derived_calculations(
+        self,
+        result: Dict[str, Any],
+        row: Dict[str, Any],
+        calc_distance: int,
+        units: Dict[str, str],
+    ) -> None:
         """Add derived calculations like cost per liter, etc."""
-        if row.get("liquid") and row.get("costs") and row.get("distance"):
+        if self._has_required_fields(row):
             try:
                 # Cost per liter/volume
                 result["cpl"] = (
                     f"{(row['costs'] / row['liquid']):.3f} {units.get('costs', '')} / "
                     f"{units.get('liquid', '')}"
                 )
-
                 # Cost per distance
                 result["cpd"] = (
                     f"{(row['costs'] / row['distance'] * calc_distance):.2f} {units.get('costs', '')} / "
                     f"{calc_distance}{units.get('distance', '')}"
                 )
-
                 # Consumption rate (liquid per distance)
                 result["lpd"] = (
                     f"{(row['liquid'] / row['distance'] * calc_distance):.2f} {units.get('liquid', '')} / "
@@ -186,6 +193,10 @@ class PetrolBookData:
                 self._set_default_calculations(result)
         else:
             self._set_default_calculations(result)
+
+    def _has_required_fields(self, row: Dict[str, Any]) -> bool:
+        """Check if row has all required fields for calculations."""
+        return all(key in row and row[key] for key in ["liquid", "costs", "distance"])
 
     def _set_default_calculations(self, result: Dict[str, Any]) -> None:
         """Set default values for calculations when data is missing."""
@@ -200,7 +211,6 @@ class PetrolBookUI:
     def __init__(self, page: ft.Page):
         self.page = page
         self.data_handler = PetrolBookData()
-
         # Initialize UI components
         self.setup_page()
         self.create_components()
@@ -272,7 +282,7 @@ class PetrolBookUI:
                 ft.DataColumn(ft.Text("Volume/Distance")),
                 ft.DataColumn(ft.Text("Cost/Distance")),
             ],
-            rows=[]
+            rows=[],
         )
 
     def _create_date_time_components(self) -> None:
@@ -283,12 +293,9 @@ class PetrolBookUI:
 
         # Date and time pickers
         self.date_picker = ft.DatePicker(
-            on_change=self.handle_date_change,
-            on_dismiss=self.handle_date_dismissal
+            on_change=self.handle_date_change, on_dismiss=self.handle_date_dismissal
         )
-        self.time_picker = ft.TimePicker(
-            on_change=self.handle_time_change
-        )
+        self.time_picker = ft.TimePicker(on_change=self.handle_time_change)
         self.page.overlay.extend([self.date_picker, self.time_picker])
 
     def _create_status_components(self) -> None:
@@ -326,7 +333,7 @@ class PetrolBookUI:
                 read_only=True,
                 on_click=lambda _: self.page.open(self.date_picker),
                 width=None,
-                expand=True
+                expand=True,
             ),
             "time": ft.TextField(
                 label="Time (HH:MM)",
@@ -334,13 +341,10 @@ class PetrolBookUI:
                 read_only=True,
                 on_click=lambda _: self.page.open(self.time_picker),
                 width=None,
-                expand=True
+                expand=True,
             ),
             "station": ft.TextField(
-                label="Station",
-                hint_text="Enter station name",
-                width=None,
-                expand=True
+                label="Station", hint_text="Enter station name", width=None, expand=True
             ),
             "fuel_type": ft.Dropdown(
                 label="Fuel Type",
@@ -353,7 +357,7 @@ class PetrolBookUI:
                 value="Super E5",
                 hint_text="Select fuel type",
                 width=None,
-                expand=True
+                expand=True,
             ),
             "costs": ft.TextField(
                 label="Cost",
@@ -361,7 +365,7 @@ class PetrolBookUI:
                 keyboard_type=ft.KeyboardType.NUMBER,
                 suffix_text=self.data_handler.DEFAULT_TABLE_DATA["units"]["costs"],
                 width=None,
-                expand=True
+                expand=True,
             ),
             "liquid": ft.TextField(
                 label="Volume",
@@ -369,7 +373,7 @@ class PetrolBookUI:
                 keyboard_type=ft.KeyboardType.NUMBER,
                 suffix_text=self.data_handler.DEFAULT_TABLE_DATA["units"]["liquid"],
                 width=None,
-                expand=True
+                expand=True,
             ),
             "distance": ft.TextField(
                 label="Distance",
@@ -377,7 +381,7 @@ class PetrolBookUI:
                 keyboard_type=ft.KeyboardType.NUMBER,
                 suffix_text=self.data_handler.DEFAULT_TABLE_DATA["units"]["distance"],
                 width=None,
-                expand=True
+                expand=True,
             ),
             "mileage": ft.TextField(
                 label="Mileage",
@@ -385,7 +389,7 @@ class PetrolBookUI:
                 keyboard_type=ft.KeyboardType.NUMBER,
                 suffix_text=self.data_handler.DEFAULT_TABLE_DATA["units"]["distance"],
                 width=None,
-                expand=True
+                expand=True,
             ),
             "units": self.data_handler.DEFAULT_TABLE_DATA["units"],
         }
@@ -394,15 +398,21 @@ class PetrolBookUI:
         dialog_content = ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Text("Add New Fueling Operation", size=20, weight=ft.FontWeight.BOLD),
-                    ft.Row([
-                        self.add_entry_fields["date"],
-                        date_picker_button,
-                    ]),
-                    ft.Row([
-                        self.add_entry_fields["time"],
-                        time_picker_button,
-                    ]),
+                    ft.Text(
+                        "Add New Fueling Operation", size=20, weight=ft.FontWeight.BOLD
+                    ),
+                    ft.Row(
+                        [
+                            self.add_entry_fields["date"],
+                            date_picker_button,
+                        ]
+                    ),
+                    ft.Row(
+                        [
+                            self.add_entry_fields["time"],
+                            time_picker_button,
+                        ]
+                    ),
                     self.add_entry_fields["station"],
                     self.add_entry_fields["fuel_type"],
                     self.add_entry_fields["costs"],
@@ -412,7 +422,9 @@ class PetrolBookUI:
                     # self.add_entry_fields["notes"],
                     ft.Row(
                         [
-                            ft.TextButton("Cancel", on_click=self.close_add_entry_dialog),
+                            ft.TextButton(
+                                "Cancel", on_click=self.close_add_entry_dialog
+                            ),
                             ft.FilledButton(
                                 "Save",
                                 on_click=self.save_new_entry,
@@ -426,7 +438,7 @@ class PetrolBookUI:
                 tight=True,
             ),
             expand=True,  # Makes the container expand to available width
-            padding=10
+            padding=10,
         )
 
         # Create the dialog
@@ -467,7 +479,7 @@ class PetrolBookUI:
                         spacing=10,
                     )
                 ),
-                expand=True
+                expand=True,
             )
         )
         self.page.floating_action_button = self.add_entry_button
@@ -508,7 +520,7 @@ class PetrolBookUI:
 
     def handle_date_change(self, e) -> None:
         """Handle date selection."""
-        if hasattr(self, 'add_entry_dialog') and self.add_entry_dialog.open:
+        if hasattr(self, "add_entry_dialog") and self.add_entry_dialog.open:
             self.add_entry_fields["date"].value = e.date.strftime("%Y-%m-%d")
             self.add_entry_fields["date"].update()
 
@@ -518,7 +530,7 @@ class PetrolBookUI:
 
     def handle_time_change(self, e) -> None:
         """Handle time selection."""
-        if hasattr(self, 'add_entry_dialog') and self.add_entry_dialog.open:
+        if hasattr(self, "add_entry_dialog") and self.add_entry_dialog.open:
             self.add_entry_fields["time"].value = e.time.strftime("%H:%M")
             self.add_entry_fields["time"].update()
 
@@ -529,7 +541,7 @@ class PetrolBookUI:
         self.add_entry_fields["time"].value = datetime.datetime.now().strftime("%H:%M")
 
         # Clear other fields
-        for field_name in ["station", "costs", "liquid", "distance", "mileage", ]:
+        for field_name in ["station", "costs", "liquid", "distance", "mileage"]:
             self.add_entry_fields[field_name].value = ""
 
         # Reset fuel type dropdown
@@ -642,7 +654,7 @@ class PetrolBookUI:
             return rows
 
         # Find the start mileage (lowest mileage value)
-        start_mileage = float('inf')
+        start_mileage = float("inf")
         for operation in operations:
             if "mileage" in operation and operation["mileage"] is not None:
                 try:
@@ -652,12 +664,14 @@ class PetrolBookUI:
                 except (ValueError, TypeError):
                     pass
 
-        if start_mileage == float('inf'):
+        if start_mileage == float("inf"):
             start_mileage = 0
 
         # Process each row
         for operation in operations:
-            processed = self.data_handler.prepare_table_row_data(operation, start_mileage, calc_distance)
+            processed = self.data_handler.prepare_table_row_data(
+                operation, start_mileage, calc_distance
+            )
 
             # Create DataRow
             row = ft.DataRow(
